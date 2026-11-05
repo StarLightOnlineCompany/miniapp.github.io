@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+            user-select: none; 
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 414px;
+            height: 100vh;
+            max-height: 896px;
+            background: #18181a;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #2a2a2d 0%, #18181a 70%);
+            padding-bottom: 90px;
+        }
+
+        .app-container::-webkit-scrollbar { display: none; }
+
+        /* --- ШАПКА --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #8a2be2, #4b0082);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border: 2px solid #a9a9a9;
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .currency {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .currency span { display: flex; align-items: center; gap: 4px; }
+        .currency .star { color: #ffd700; }
+        .currency .diamond { color: #00bfff; }
+
+        /* --- РЕКЛАМНЫЙ БЛОК --- */
+        .ad-banner {
+            margin: 5px 15px 15px 15px;
+            height: 100px;
+            background: repeating-linear-gradient(
+                45deg,
+                #2a2a2a,
+                #2a2a2a 15px,
+                #333 15px,
+                #333 30px
+            );
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed #555;
+            font-size: 14px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* --- КАРТОЧКИ --- */
+        .cards-container {
+            padding: 0 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            height: 90px;
+            border-radius: 20px;
+            padding: 15px 20px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .card:active { transform: scale(0.98); }
+
+        .card h3 {
+            font-size: 22px;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .tag {
+            background: #ff3366;
+            color: white;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            width: max-content;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-icon-svg {
+            position: absolute;
+            right: 15px;
+            bottom: 15px;
+            width: 50px;
+            height: 50px;
+            fill: rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+
+        .card.yellow { background: linear-gradient(135deg, #ffcc00, #ff9900); color: #4a2c00; }
+        .card.yellow h3 { text-shadow: none; }
+        .card.yellow .card-icon-svg { fill: rgba(0,0,0,0.2); }
+        
+        .card.blue { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #003366; }
+        .card.blue h3 { text-shadow: none; }
+        .card.blue .card-icon-svg { fill: rgba(0,0,0,0.2); }
+
+        .card.gold { background: linear-gradient(135deg, #f6d365, #fda085); color: #4a2c00; }
+        .card.gold h3 { text-shadow: none; }
+        .card.gold .card-icon-svg { fill: rgba(0,0,0,0.2); }
+
+        /* --- ЭКРАНЫ --- */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .screen.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-content { padding: 15px; }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .placeholder-box {
+            background: #2a2a2d;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            color: #888;
+            margin-bottom: 15px;
+            border: 1px solid #333;
+        }
+
+        /* Специальный стиль для Премиума */
+        .premium-box {
+            background: linear-gradient(135deg, #2b2b36, #1a1a24);
+            border: 1px solid #444;
+            padding: 25px 20px;
+        }
+
+        .premium-title {
+            color: #ffd700;
+            font-size: 20px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .premium-price {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        .btn-buy {
+            background: #4facfe;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            border: none;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn-buy:active { background: #3a8bdf; }
+
+        /* --- НИЖНЕЕ МЕНЮ --- */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(28, 28, 31, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 5px 25px 5px;
+            border-top: 1px solid #333;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #888;
+            font-size: 10px;
+            gap: 5px;
+            cursor: pointer;
+            transition: color 0.2s;
+            width: 60px;
+        }
+
+        .nav-item.active { color: white; }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .nav-icon svg { width: 100%; height: 100%; fill: #888; transition: fill 0.2s; }
+
+        .nav-item.active .nav-icon {
+            background: #2a2a2d;
+            padding: 6px 20px;
+            border-radius: 12px;
+            border: 1px solid #555;
+            width: auto;
+            height: auto;
+        }
+
+        .nav-item.active .nav-icon svg { fill: #4facfe; width: 24px; height: 24px; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- Шапка -->
+    <header class="header">
+        <div class="user-info">
+            <div class="avatar" id="user-avatar">A</div>
+            <span id="user-name">Загрузка...</span>
+        </div>
+        <div class="currency">
+            <span class="star">★ 0</span>
+            <span class="diamond">💎 0</span>
+        </div>
+    </header>
+
+    <!-- ЭКРАН 1: ГЛАВНАЯ -->
+    <div id="screen-home" class="screen active">
+        <div class="ad-banner">
+            Тут может быть твоя реклама
+        </div>
+
+        <div class="cards-container">
+            <!-- Магазин -->
+            <div class="card yellow" onclick="navigateTo('shop')">
+                <h3>Магазин</h3>
+                <div class="tag">НОВОЕ</div>
+                <svg class="card-icon-svg" viewBox="0 0 24 24">
+                    <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                </svg>
+            </div>
+
+            <!-- Рейтинг -->
+            <div class="card blue" onclick="navigateTo('rating')">
+                <h3>Рейтинг</h3>
+                <p style="font-size: 12px; opacity: 0.8;">топы и призы</p>
+                <svg class="card-icon-svg" viewBox="0 0 24 24">
+                    <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+                </svg>
+            </div>
+
+            <!-- Лотерея -->
+            <div class="card gold" onclick="navigateTo('lottery')">
+                <h3>Лотерея</h3>
+                <div class="tag" style="background: #ff8c00;">ХАЙПИТ</div>
+                <svg class="card-icon-svg" viewBox="0 0 24 24">
+                    <path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН 2: МАГАЗИН -->
+    <div id="screen-shop" class="screen">
+        <div class="page-content">
+            <div class="page-title">Магазин 🛒</div>
+            
+            <!-- Блок Премиума -->
+            <div class="placeholder-box premium-box">
+                <div class="premium-title">⭐ Премиум</div>
+                <div class="premium-price">50 звёзд</div>
+                <button class="btn-buy" onclick="buyPremium()">Купить</button>
+            </div>
+
+            <!-- Другие товары -->
+            <div class="placeholder-box">Товар 1 - 100$</div>
+            <div class="placeholder-box">Товар 2 - 500$</div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН 3: РЕЙТИНГ -->
+    <div id="screen-rating" class="screen">
+        <div class="page-content">
+            <div class="page-title">Рейтинг 🏆</div>
+            <div class="placeholder-box">1 место: Иван (10000 очков)</div>
+            <div class="placeholder-box">2 место: Мария (8500 очков)</div>
+            <div class="placeholder-box">3 место: Алексей (7000 очков)</div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН 4: ЛОТЕРЕЯ -->
+    <div id="screen-lottery" class="screen">
+        <div class="page-content">
+            <div class="page-title">Лотерея 🎟️</div>
+            <div class="placeholder-box" style="height: 200px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 50px; margin-bottom: 10px;">🎰</div>
+                <h3>Крутить рулетку</h3>
+                <p style="margin-top: 5px; font-size: 12px;">Стоимость: 1 билет</p>
+                <button class="btn-buy" style="margin-top: 15px; width: 150px;" onclick="spinLottery()">Крутить</button>
+            </div>
+            <div class="placeholder-box">Ваши билеты: 5 шт.</div>
+        </div>
+    </div>
+
+    <!-- Нижнее меню -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" id="nav-home" onclick="navigateTo('home')">
+            <div class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </div>
+            <span>Главная</span>
+        </div>
+        
+        <div class="nav-item" id="nav-rating" onclick="navigateTo('rating')">
+            <div class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
+            </div>
+            <span>Рейтинг</span>
+        </div>
+
+        <div class="nav-item" id="nav-lottery" onclick="navigateTo('lottery')">
+            <div class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
+            </div>
+            <span>Лотерея</span>
+        </div>
+    </nav>
+
+</div>
+
+<script>
+    // --- ИНТЕГРАЦИЯ С TELEGRAM ---
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.ready(); 
+        tg.expand(); 
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            document.getElementById('user-name').textContent = user.first_name;
+            if (user.photo_url) {
+                document.getElementById('user-avatar').innerHTML = `<img src="${user.photo_url}" alt="avatar">`;
+            } else {
+                document.getElementById('user-avatar').textContent = user.first_name.charAt(0).toUpperCase();
+            }
+        } else {
+            document.getElementById('user-name').textContent = "Александр";
+        }
+    } else {
+        document.getElementById('user-name').textContent = "Александр";
+    }
+
+    // --- НАВИГАЦИЯ ---
+    function navigateTo(screenName) {
+        document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+        const targetScreen = document.getElementById('screen-' + screenName);
+        if (targetScreen) targetScreen.classList.add('active');
+
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        const targetNav = document.getElementById('nav-' + screenName);
+        if (targetNav) targetNav.classList.add('active');
+        
+        document.querySelector('.app-container').scrollTop = 0;
+    }
+
+    // --- ПОКУПКА ПРЕМИУМА (Заглушка) ---
+    function buyPremium() {
+        alert("Оплата звездами пока недоступна. Следите за обновлениями!");
+    }
+
+    // --- ЛОТЕРЕЯ (Заглушка) ---
+    function spinLottery() {
+        alert("Лотерея пока недоступна. Следите за обновлениями!");
+    }
+</script>
+
+</body>
+</html>
